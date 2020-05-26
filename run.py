@@ -88,15 +88,18 @@ class CCode:
         os.system(f"cat {self.filename}")
         print("\n"+"-"*line_length)
 
+
 def main():
     Runner = CCode()
     while True:
         inp = input(">>> ")
-        if inp == "exit()":
+        if inp == "exit":
             break
         elif inp in ["help", "h"]:
             #TODO add help menu
             print("help, h, exit(), print file, etc, can't redeclare variables")
+        elif inp == "restart":
+            Runner = CCode()
         elif inp == "undo":
             Runner.undo()
         elif inp == "file":
@@ -109,6 +112,13 @@ def main():
                 function += (inp + "\n")
                 inp = input(">")
             Runner.add_function(function)
+        elif inp == "multiline"
+            command = ""
+            inp = input(">")
+            while inp != "endmultiline":
+                command += (inp + "\n")
+                inp = input(">")
+            Runner.add_command(command)
         elif inp == "":
             pass
         elif inp[:8] == "#include":
@@ -124,8 +134,6 @@ def main():
 
         #TODO make debugger only
         #Runner.print_file()
-        #gcc -E file
-        #cpp file
         #TODO add function functionality
 
 
