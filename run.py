@@ -1,33 +1,32 @@
 import os
-import random
-import time
 import subprocess
+import logging
 
 class CCode:
     def __init__(self):
-        #self.__filename_length = 10
-        #str(random.randint(10**self.__filename_length, 10**(self.__filename_length+1)))
-
-        # TODO Make this c or cpp?
         #self.filename = "c_interpreter_" + time.strftime("%m_%d_%H_%M_%S") + ".cpp"
         self.filename = "c_interpreter.cpp"
         self.__includes = ["#include <stdio.h>"]
         self.__functions = []
         self.__variables = []
         self.__commands = []
-        self.__compiler = "g++" #"gcc", clang, clang++
+        self.__compiler = "g++"# -std=c++11" #"gcc", clang, clang++
+
+        self.__namespaces = []
 
         self.insertion_order = []
         self.__last_print = ""
+        self.compile()
 
     def compile(self):
         # Write to file, run file
         with open(self.filename, "w") as fp:
             for include in self.__includes:
                 fp.write(include+"\n")
+            for namespace in self.__namespaces:
+                fp.write(namespace+"\n")
             for function in self.__functions:
                 fp.write(function)
-            fp.write("using namespace std;\n")
             fp.write("int main() {\n")
             for command in self.__commands:
                 fp.write(command)
@@ -56,10 +55,16 @@ class CCode:
         self.__functions.append(function)
         self.insertion_order.append("function")
         self.__last_print = ""
+    def add_namespace(self, namespace):
+        self.__namespaces.append(namespace)
+        self.insertion_order.append("namespace")
+        self.__last_print = ""
 
     def undo(self):
         if len(self.insertion_order) == 0:
             print("Nothing to undo")
+        if self.__last_print != "":
+            self.__last_print = ""
         else:
             last_insertion = self.insertion_order.pop()
             if last_insertion == "include":
@@ -68,7 +73,8 @@ class CCode:
                 self.__functions.pop()
             elif last_insertion == "command":
                 self.__commands.pop()
-        self.__last_print = ""
+            elif last_insertion == "namespace":
+                self.__namespaces.pop()
 
 
     def add_print(self, print_stmt):
@@ -95,15 +101,22 @@ def main():
             Runner.undo()
         elif inp == "file":
             Runner.print_file()
+            continue;
+        elif inp == "function":
+            function = ""
+            inp = input(">")
+            while inp != "endfunction":
+                function += (inp + "\n")
+                inp = input(">")
+            Runner.add_function(function)
         elif inp == "":
             pass
-        #elif inp[-1] == ";":
-        #    pass
         elif inp[:8] == "#include":
             Runner.add_include(inp)
-        elif inp[:4] == "cout" or inp[:9] == "std::cout" or inp[:5] == "print" or inp[:9] == "std::print":
-            #TODO remove using namespace from code?
+        elif inp[:4] == "cout" or inp[:9] == "std::cout" or inp[:5] == "print":
             Runner.add_print(inp)
+        elif inp[:5] == "using":
+            Runner.add_namespace(inp)
         else:
             Runner.add_command(inp)
 
@@ -113,6 +126,7 @@ def main():
         #Runner.print_file()
         #gcc -E file
         #cpp file
+        #TODO add function functionality
 
 
 if __name__ == "__main__":
