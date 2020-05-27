@@ -77,7 +77,7 @@ class CCode:
         Print the contents of the code file
     """
 
-    def __init__(self, filename = "c_interpeter.cpp", compiler = ["g++"]):
+    def __init__(self, filename = "c_interpreter.cpp", compiler = ["g++"]):
         """
         Parameters
         ----------
@@ -374,18 +374,56 @@ def print_help():
     endmulti[line]: stop entering a multiline piece of code
     <enter>: repeat the previous command
     compiler: show the current compiler
-    compiler <new compiler>: change the compiler. Can add flags'''
-    #TODO add custom print functions for common c types
+    compiler <new compiler>: change the compiler. Can add flags
+    pprint <type> <variable>: pretty print a variable
+        <type> array, vector, queue, list, stack, int, float, double, string
+        <variable>: x, myList, my_input_vector
+    restart: delete all previous inputs. Same as exiting and rerunning program'''
     print(help_string)
 
 def interactive_runner():
+    """Run the interactive shell, which accepts commands and interfaces with the CCode class
+
+    Example Inputs
+    --------------
+    exit
+    help
+    restart
+    file
+    compiler
+    compiler clang
+    int x = 10;
+    #inlude <vector>
+    undo
+    printf("Hello world\n");
+    pprint vector myVector
+    pprint int x
+    func
+    int myGT(int a, int b) {
+        return a > b;
+    }
+    endfunc
+    multi
+    struct Books {
+        char  title[50];
+        char  author[50];
+        char  subject[100];
+        int   book_id;
+    };  
+    endmulti
+    """
+
+    logging.basicConfig(level=logging.DEBUG, filename='app.log', filemode='w', format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
     Runner = CCode()
 
+    # Print logo
     print(GLOBAL_INTRO)
     print("To get help, type h[elp]")
 
     while True:
         inp = input(">>> ")
+        logging.debug(f"Logging input: {inp}")
         if inp == "exit":
             break
         elif inp in ["help", "h"]:
@@ -393,22 +431,27 @@ def interactive_runner():
         elif inp == "restart":
             Runner = CCode()
         elif inp == "undo":
+            # Undo previous insertion
             Runner.undo()
         elif inp == "file":
+            # View file contents
             Runner.print_file()
             continue;
         elif inp[:8] == "compiler":
+            # View of change the compiler
             if len(inp) == 8:
                 print(f"compiler: {Runner.get_compiler()}")
             else:
                 print(f"old compiler: {Runner.get_compiler()}")
-                Runner.set_compiler(inp.split()[1:]) # remove "compiler"
+                Runner.set_compiler(inp.split()[1:]) # remove "compiler" keyword
                 print(f"new compiler: {Runner.get_compiler()}")
         elif inp[:6] == "pprint":
+            # Pretty print
             inp = inp.split()
             inp = inp[1:]
             Runner.pretty_print(inp)
         elif inp in ["func", "function"]:
+            #Multiline function
             function = ""
             print("function mode, end using endfunc[tion]")
             inp = input("> ")
@@ -417,6 +460,7 @@ def interactive_runner():
                 inp = input("> ")
             Runner.add_function(function)
         elif inp in ["multiline", "multi"]:
+            #Multiline code segment inside main
             print("multiline mode, end using endmutli[line]")
             command = ""
             inp = input("> ")
@@ -425,14 +469,13 @@ def interactive_runner():
                 inp = input("> ")
             Runner.add_command(command)
         elif inp == "":
+            # repeat previous command
             pass
         else:
             Runner.add_code(inp)
 
         Runner.compile()
-
-        #TODO make debugger only, add logging output
-        #Runner.print_file()
+        logging.info(f"Code state:\n{Runner}")
 
 def test_pretty_print():
     """Tests the pretty_print method for CCode
