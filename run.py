@@ -278,6 +278,77 @@ class CCode:
 
         return self.__compiler
 
+    def pretty_print(self, print_type: str, var: str):
+        """Provides helper functions for pretty printing different c/c++ objects
+
+        Supported types include array, vector, queue, list, stack, int, float, double, string
+
+        Parameters
+        ----------
+        print_type : str
+            the type of the object that we are wanting to print
+        var : str
+            the name of the variable that holds the object we want to print
+        """
+
+        # Check if iosteam is included and add it if it isn't
+        ios_include = "#include <iostream>"
+        if ios_include not in self.__includes:
+            self.add_include(ios_include)
+
+        if print_type == "array":
+            # https://www.techiedelight.com/print-contents-array-cpp/
+            print_function = (
+                    f"size_t pprint_n = sizeof({var})/sizeof({var}[0]);\n"
+                    'std::cout << "[ ";\n'
+                    "for (size_t pprint_i = 0; pprint_i < pprint_n; pprint_i++) {\n"
+                    f"    std::cout << {var}[pprint_i] << ' ';\n"
+                    "}\n"
+                    "std::cout << ']';\n")
+            self.add_print(print_function)
+        elif print_type == "vector":
+            print_function = (
+                    'std::cout << "[ ";\n'
+                    f"for (auto const& pprint_i: {var})"
+                    "{ std::cout << pprint_i << ' '; }\n"
+                    "std::cout << ']';\n")
+            self.add_print(print_function)
+
+        elif print_type == "queue":
+            # https://stackoverflow.com/questions/22280318/how-do-i-print-a-queue
+            print_function = (
+            'std::cout << "[ ";\n'
+            f"while (!{var}.empty()) "
+            "{\n"
+            f"    std::cout << {var}.front() << ' ';\n"
+            f"    {var}.pop();\n"
+            "}\n"
+            "std::cout << ']';\n")
+            self.add_print(print_function)
+
+        elif print_type == "list":
+            print_function = (
+                    'std::cout << "[ ";\n'
+                    f"for (auto pprint_v : {var}) "
+                    "{\n    std::cout << pprint_v << ' ';\n}\n"
+                    "std::cout << ']';\n")
+            self.add_print(print_function)
+
+        elif print_type == "stack":
+            print_function = (
+                    'std::cout << "[ ";\n'
+                    f"while (!{var}.empty()) "
+                    "{\n"
+                    f"std::cout << {var}.top() << ' ';\n"
+                    f"{var}.pop();\n"
+                    "}"
+                    "std::cout << ']';\n")
+            self.add_print(print_function)
+
+        elif print_type in ["int", "float", "double", "string"]:
+            self.add_print(f"std::cout << {var} << '\\n';")
+            #self.add_print("print_int({var});\n")
+
     def print_file(self):
         """Print the current contents of the compilation file
 
@@ -308,12 +379,11 @@ def print_help():
     print(help_string)
 
 def interactive_runner():
-    pass
-
-def main():
     Runner = CCode()
+
     print(GLOBAL_INTRO)
     print("To get help, type h[elp]")
+
     while True:
         inp = input(">>> ")
         if inp == "exit":
@@ -332,8 +402,12 @@ def main():
                 print(f"compiler: {Runner.get_compiler()}")
             else:
                 print(f"old compiler: {Runner.get_compiler()}")
-                Runner.set_compiler(inp.split()[1:])
+                Runner.set_compiler(inp.split()[1:]) # remove "compiler"
                 print(f"new compiler: {Runner.get_compiler()}")
+        elif inp[:6] == "pprint":
+            inp = inp.split()
+            inp = inp[1:]
+            Runner.pretty_print(inp)
         elif inp in ["func", "function"]:
             function = ""
             print("function mode, end using endfunc[tion]")
@@ -360,6 +434,73 @@ def main():
         #TODO make debugger only, add logging output
         #Runner.print_file()
 
+def test_pretty_print():
+    """Tests the pretty_print method for CCode
+    """
+
+    print("Testing array, expecting: [ 1 2 3 ]", end='')
+    Runner = CCode()
+    Runner.add_command("int x[] = {1,2,3};")
+    Runner.pretty_print("array", "x")
+    Runner.compile()
+
+    print("Testing vector, expecting: [ 1 2 3 ]", end='')
+    Runner = CCode()
+    Runner.add_include("#include <vector>")
+    Runner.add_command("std::vector<int> x = {1, 2, 3};")
+    Runner.pretty_print("vector", "x")
+    Runner.compile()
+
+    print("Testing queue, expecting: [ 1 2 3 ]", end='')
+    Runner = CCode()
+    Runner.add_include("#include <queue>")
+    Runner.add_command("std::queue<int> x;")
+    Runner.add_command("for (auto i : {1,2,3}) x.push(i);")
+    Runner.pretty_print("queue", "x")
+    Runner.compile()
+
+    print("Testing list, expecting: [ 1 2 3 ]", end='')
+    Runner = CCode()
+    Runner.add_include("#include <list>")
+    Runner.add_command("std::list<int> x = {1, 2, 3};")
+    Runner.pretty_print("list", "x")
+    Runner.compile()
+
+    print("Testing stack, expecting: [ 1 2 3 ]", end='')
+    Runner = CCode()
+    Runner.add_command("std::stack<int> s;")
+    Runner.add_command("s.push(3); s.push(2); s.push(1);")
+    Runner.add_include("#include <stack>")
+    Runner.pretty_print("stack", "s")
+    Runner.compile()
+
+    print("Testing int, expecting: 10", end='')
+    Runner = CCode()
+    Runner.add_command("int x = 10;")
+    Runner.pretty_print("int", "x")
+    Runner.compile()
+
+    print("Testing float, expecting: 1.1", end='')
+    Runner = CCode()
+    Runner.add_command("float x = 1.1;")
+    Runner.pretty_print("float", "x")
+    Runner.compile()
+
+    print("Testing double, expecting: 1.1", end='')
+    Runner = CCode()
+    Runner.add_command("double x = 1.1;")
+    Runner.pretty_print("double", "x")
+    Runner.compile()
+
+    print("Testing string, expecting: abcdefg", end='')
+    Runner = CCode()
+    Runner.add_command("char x[] = \"abcdefg\";")
+    Runner.pretty_print("string", "x")
+    Runner.compile()
+
+def main():
+    #TODO add logging
+    interactive_runner()
 
 if __name__ == "__main__":
     main()
